@@ -24,9 +24,11 @@
         "vite": "^4.4.9"
     },
     "private": true,
-    "scripts": {
+  "scripts": {
         "dev": "vite build --mode development --watch",
         "build": "vite build --mode production",
+        "deploy": "node scripts/deploy.mjs \"$OBSIDIAN_PLUGIN_DIR\"",
+        "deploy:icloud": "npm run build && node scripts/deploy.mjs '/Users/samuellevine/Library/Mobile Documents/iCloud~md~obsidian/Documents/Curse of Strahd Campaign/.obsidian/plugins/my-smart-second-brain'",
         "check": "svelte-check --tsconfig ./tsconfig.json",
         "format": "biome format --write ./src",
         "lint": "biome lint --apply-unsafe ./src"
