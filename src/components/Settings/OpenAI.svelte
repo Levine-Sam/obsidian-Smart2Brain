@@ -3,20 +3,23 @@
     import { plugin, data, papaState } from '../../store';
     import SettingContainer from './SettingContainer.svelte';
     import DropdownComponent from '../base/Dropdown.svelte';
-    import { isAPIKeyValid } from '../../controller/OpenAI';
-    import { OpenAIGenModels, OpenAIGenModelNames, OpenAIEmbedModelNames } from './models';
+    import { getOpenAIModelNames, isAPIKeyValid } from '../../controller/OpenAI';
+    import { OpenAIGenModels, OpenAIGenModelNames as DefaultOpenAIGenModelNames, OpenAIEmbedModelNames as DefaultOpenAIEmbedModelNames } from './models';
     import { onMount } from 'svelte';
     import { t } from 'svelte-i18n';
 
     let openAIApiKey: string;
     let isOpenAIAPIKeyValid = false;
     let apiKeyStyles: string = '';
+    let genOptions: string[] = DefaultOpenAIGenModelNames;
+    let embedOptions: string[] = DefaultOpenAIEmbedModelNames;
 
     onMount(async () => {
         isOpenAIAPIKeyValid = await isAPIKeyValid($data.openAIGenModel.openAIApiKey);
         openAIApiKey = $data.openAIGenModel.openAIApiKey;
         hideApiKey();
         apiKeyStyles = openAIApiKey && !isOpenAIAPIKeyValid ? '!border-[--background-modifier-error]' : '';
+        if (isOpenAIAPIKeyValid) await refreshModelOptions(openAIApiKey);
     });
 
     const changeApiKey = async (newApiKey: string) => {
@@ -28,6 +31,7 @@
         $plugin.saveSettings();
         $papaState = 'settings-change';
         apiKeyStyles = openAIApiKey && !isOpenAIAPIKeyValid ? '!border-[--background-modifier-error]' : '';
+        if (isOpenAIAPIKeyValid) await refreshModelOptions(newApiKey);
     };
 
     const hideApiKey = () => {
@@ -50,6 +54,20 @@
         $plugin.saveSettings();
         $papaState = 'settings-change';
     };
+
+    async function refreshModelOptions(apiKey: string) {
+        try {
+            const { gen, embed } = await getOpenAIModelNames(apiKey);
+            genOptions = gen.length ? gen : DefaultOpenAIGenModelNames;
+            embedOptions = embed.length ? embed : DefaultOpenAIEmbedModelNames;
+            // Ensure current selections remain selectable
+            if (!genOptions.includes($data.openAIGenModel.model)) genOptions = [$data.openAIGenModel.model, ...genOptions];
+            if (!embedOptions.includes($data.openAIEmbedModel.model)) embedOptions = [$data.openAIEmbedModel.model, ...embedOptions];
+        } catch (e) {
+            genOptions = DefaultOpenAIGenModelNames;
+            embedOptions = DefaultOpenAIEmbedModelNames;
+        }
+    }
 </script>
 
 <SettingContainer name="OpenAI" isHeading={true} desc={$t('settings.openai.desc')} />
@@ -65,7 +83,7 @@
 >
     <DropdownComponent
         selected={$data.openAIGenModel.model}
-        options={OpenAIGenModelNames.map((model) => ({ display: model, value: model }))}
+        options={genOptions.map((model) => ({ display: model, value: model }))}
         changeFunc={openAIGenChange}
     />
 </SettingContainer>
@@ -77,7 +95,7 @@
 >
     <DropdownComponent
         selected={$data.openAIEmbedModel.model}
-        options={OpenAIEmbedModelNames.map((model) => ({ display: model, value: model }))}
+        options={embedOptions.map((model) => ({ display: model, value: model }))}
         changeFunc={openAIEmbedChange}
     />
 </SettingContainer>
